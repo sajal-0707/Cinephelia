@@ -1,8 +1,9 @@
 import axios from 'axios';
 
-axios.defaults.baseURL = 'http://localhost:4000';
+const API_URL = 'https://cinephelia-backend.onrender.com';
+
+axios.defaults.baseURL = API_URL;
 axios.defaults.withCredentials = true;
-// Hardcoded mock movies removed as per request
 
 export const getMovies = async () => {
   try {
@@ -27,7 +28,7 @@ export const getMovieById = async (id) => {
 export const getMovieShowtimes = async (id) => {
   try {
     const res = await axios.get(`/api/movies/${id}/showtimes`);
-    return res.data; // assuming this returns an array of showtimes
+    return res.data;
   } catch (error) {
     console.warn('Failed to fetch showtimes from backend');
     return [];
@@ -45,7 +46,7 @@ export const logoutUser = async () => {
 };
 
 export const createBooking = async (bookingData) => {
-  const response = await fetch('http://localhost:4000/api/bookings', {
+  const response = await fetch(`${API_URL}/api/bookings`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -65,7 +66,7 @@ export const getUserBookings = async () => {
 };
 
 export const addMovie = async (movieData) => {
-  const response = await fetch('http://localhost:4000/api/movies', {
+  const response = await fetch(`${API_URL}/api/movies`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
