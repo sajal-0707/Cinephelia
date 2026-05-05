@@ -15,7 +15,18 @@ const app = express();
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: function(origin, callback) {
+    const allowed = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      process.env.CLIENT_URL,
+    ].filter(Boolean);
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 
