@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
@@ -15,6 +16,11 @@ import { AuthProvider } from './context/AuthContext';
 import RippleBackground from './components/RippleBackground';
 
 function App() {
+  useEffect(() => {
+    // Wake up the backend on app load
+    fetch(`${import.meta.env.VITE_API_URL}/api/health`).catch(() => {});
+  }, []);
+
   return (
     <AuthProvider>
       <Router>
