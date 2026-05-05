@@ -1,0 +1,149 @@
+.movie-detail-page {
+  position: relative;
+}
+
+.detail-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60vh;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+.detail-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(42, 8, 0, 0.6), var(--color-primary-dark) 90%);
+}
+
+.detail-content {
+  position: relative;
+  z-index: 1;
+  padding-top: 20vh;
+  padding-bottom: 4rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 3rem;
+}
+
+.poster-col {
+  display: flex;
+  justify-content: center;
+}
+
+.detail-poster {
+  width: 100%;
+  max-width: 300px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 20px rgba(212, 175, 55, 0.3);
+  border: 2px solid var(--color-accent);
+}
+
+.info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.detail-title {
+  font-size: 3.5rem;
+  line-height: 1.1;
+  text-transform: none;
+}
+
+.detail-meta {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  color: var(--color-text-light);
+}
+
+.genre-badge {
+  background: var(--color-surface);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  border: 1px solid var(--color-accent);
+  font-size: 0.9rem;
+}
+
+.detail-section h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--color-secondary);
+}
+
+.detail-section p {
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+}
+
+.booking-section {
+  padding: 2rem;
+  margin-top: 1rem;
+}
+
+.booking-section h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: var(--color-accent);
+}
+
+.date-selector, .time-selector {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.date-btn, .time-btn {
+  background: rgba(42, 8, 0, 0.8);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  color: var(--color-text-light);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.date-btn:hover, .time-btn:hover {
+  border-color: var(--color-accent);
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.date-btn.active, .time-btn.active {
+  background: var(--color-accent);
+  color: var(--color-primary-dark);
+  font-weight: bold;
+  border-color: var(--color-accent);
+}
+
+.proceed-btn {
+  display: inline-flex;
+  width: auto;
+}
+
+@media (max-width: 768px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .detail-content {
+    padding-top: 10vh;
+  }
+  .detail-title {
+    font-size: 2.5rem;
+  }
+}
