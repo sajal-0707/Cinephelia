@@ -1,8 +1,9 @@
 import { useState, useContext, useEffect } from 'react';
-import { useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { CreditCard, CheckCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { createBooking } from '../services/api';
+import { API_URL } from '../services/api';
 import './Checkout.css';
 
 const Checkout = () => {
@@ -11,27 +12,26 @@ const Checkout = () => {
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('card');
   const [bookingResponse, setBookingResponse] = useState(null);
-  
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [locationStr, setLocationStr] = useState('');
-  
+
   const bookingData = location?.state;
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/login');
-    }
+    if (!loading && !user) navigate('/login');
   }, [user, loading, navigate]);
 
-  if (loading) {
-    return <div className="page-wrapper container flex-center"><h3>Checking session...</h3></div>;
-  }
+  useEffect(() => {
+    // Load Razorpay script
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => document.body.removeChild(script);
+  }, []);
 
-  if (!user) {
-    return null; // Prevents flashing content before navigate
-  }
+  if (loading) return <div className="page-wrapper container flex-center"><h3>Checking session...</h3></div>;
+  if (!user) return null;
 
   if (!bookingData) {
     return (
@@ -43,34 +43,76 @@ const Checkout = () => {
   }
 
   const { movie, movieId, showtimeId, date, time, seats, totalAmount } = bookingData;
+  const finalAmount = totalAmount + 2;
 
   const handlePayment = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
-    
+
     try {
-      const apiPayload = {
-        movieId,
-        showtimeId,
-        seats
-      };
-      
-      // Save the booking to the backend
-      const response = await createBooking(apiPayload);
-      
-      // Update UI with the confirmed booking
-      setBookingResponse({
-        id: response?.id || response?._id || Math.random().toString(36).substr(2, 9).toUpperCase(),
-        totalAmount: totalAmount + 2,
-        paymentMethod,
-        phoneNumber,
-        location: locationStr
+      // Step 1: Create Razorpay order
+      const orderRes = await fetch(`${API_URL}/api/payments/create-order`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: finalAmount }),
       });
-      setIsSuccess(true);
+      const orderData = await orderRes.json();
+
+      if (!orderData.success) throw new Error('Failed to create order');
+
+      // Step 2: Open Razorpay popup
+      const options = {
+        key: orderData.key,
+        amount: orderData.order.amount,
+        currency: 'INR',
+        name: 'Cinephelia',
+        description: `Tickets for ${movie.title}`,
+        order_id: orderData.order.id,
+        prefill: {
+          name: user.name,
+          email: user.email,
+          contact: phoneNumber,
+        },
+        theme: { color: '#00FFFF' },
+        handler: async function (response) {
+          // Step 3: Verify payment
+          const verifyRes = await fetch(`${API_URL}/api/payments/verify`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          });
+          const verifyData = await verifyRes.json();
+
+          if (!verifyData.success) throw new Error('Payment verification failed');
+
+          // Step 4: Create booking
+          const booking = await createBooking({ movieId, showtimeId, seats });
+
+          setBookingResponse({
+            id: booking?.booking?.bookingId || booking?._id,
+            totalAmount: finalAmount,
+          });
+          setIsSuccess(true);
+        },
+        modal: {
+          ondismiss: () => {
+            setIsProcessing(false);
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
     } catch (error) {
-      console.error('Booking failed', error);
-      alert('Failed to save booking to the backend. Please try again.');
-    } finally {
+      console.error('Payment failed', error);
+      alert('Payment failed. Please try again.');
       setIsProcessing(false);
     }
   };
@@ -86,7 +128,7 @@ const Checkout = () => {
             <p><strong>Booking ID:</strong> #{bookingResponse?.id}</p>
             <p><strong>Date & Time:</strong> {date} | {time}</p>
             <p><strong>Seats:</strong> {seats.join(', ')}</p>
-            <p><strong>Total Paid:</strong> ${bookingResponse?.totalAmount}</p>
+            <p><strong>Total Paid:</strong> ₹{bookingResponse?.totalAmount}</p>
           </div>
           <button className="btn-primary mt-4" onClick={() => navigate('/bookings')}>View My Bookings</button>
         </div>
@@ -97,7 +139,7 @@ const Checkout = () => {
   return (
     <div className="page-wrapper container animate-fade-in">
       <h1 className="page-title">Checkout</h1>
-      
+
       <div className="checkout-grid">
         <div className="summary-col glass-panel">
           <h3>Order Summary</h3>
@@ -108,122 +150,48 @@ const Checkout = () => {
               <p className="text-muted">{date} • {time}</p>
             </div>
           </div>
-          
+
           <div className="order-details">
             <div className="detail-row">
               <span>Tickets ({seats.length}x)</span>
-              <span>${totalAmount}</span>
+              <span>₹{totalAmount}</span>
             </div>
             <div className="detail-row">
               <span>Convenience Fee</span>
-              <span>$2.00</span>
+              <span>₹2.00</span>
             </div>
             <hr />
             <div className="detail-row total">
               <span>Total Amount</span>
-              <span>${totalAmount + 2}</span>
+              <span>₹{finalAmount}</span>
             </div>
           </div>
         </div>
 
         <div className="payment-col glass-panel">
           <h3>Payment Details</h3>
-          
-          <div className="payment-methods">
-            <label className={`method-tab ${paymentMethod === 'card' ? 'active' : ''}`}>
-              <input type="radio" name="payment" value="card" checked={paymentMethod === 'card'} onChange={() => setPaymentMethod('card')} />
-              Card
-            </label>
-            <label className={`method-tab ${paymentMethod === 'upi' ? 'active' : ''}`}>
-              <input type="radio" name="payment" value="upi" checked={paymentMethod === 'upi'} onChange={() => setPaymentMethod('upi')} />
-              UPI
-            </label>
-            <label className={`method-tab ${paymentMethod === 'netbanking' ? 'active' : ''}`}>
-              <input type="radio" name="payment" value="netbanking" checked={paymentMethod === 'netbanking'} onChange={() => setPaymentMethod('netbanking')} />
-              Net Banking
-            </label>
-          </div>
-
           <form onSubmit={handlePayment} className="payment-form">
-            
-            <h4 style={{ marginBottom: '-0.5rem', color: 'var(--color-accent)' }}>Contact Details</h4>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Phone Number</label>
-                <input 
-                  type="tel" 
-                  required 
-                  placeholder="e.g. +1 234 567 8900" 
-                  value={phoneNumber} 
-                  onChange={(e) => setPhoneNumber(e.target.value)} 
-                />
-              </div>
-              <div className="form-group">
-                <label>Location</label>
-                <input 
-                  type="text" 
-                  required 
-                  placeholder="e.g. New York, NY" 
-                  value={locationStr} 
-                  onChange={(e) => setLocationStr(e.target.value)} 
-                />
-              </div>
+            <div className="form-group">
+              <label>Phone Number</label>
+              <input
+                type="tel"
+                required
+                placeholder="e.g. 9876543210"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+              />
             </div>
 
-            <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '1rem 0' }} />
+            <p className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
+              You'll be redirected to Razorpay's secure payment page to complete your payment via Card, UPI, or Net Banking.
+            </p>
 
-            {paymentMethod === 'card' && (
-              <>
-                <div className="form-group">
-                  <label>Cardholder Name</label>
-                  <input type="text" required placeholder="John Doe" />
-                </div>
-                <div className="form-group">
-                  <label>Card Number</label>
-                  <div className="input-icon-wrapper">
-                    <CreditCard size={18} className="input-icon" />
-                    <input type="text" required placeholder="XXXX XXXX XXXX XXXX" maxLength="19" />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Expiry Date</label>
-                    <input type="text" required placeholder="MM/YY" maxLength="5" />
-                  </div>
-                  <div className="form-group">
-                    <label>CVV</label>
-                    <input type="password" required placeholder="XXX" maxLength="3" />
-                  </div>
-                </div>
-              </>
-            )}
-
-            {paymentMethod === 'upi' && (
-              <div className="form-group">
-                <label>UPI ID</label>
-                <input type="text" required placeholder="username@upi" />
-              </div>
-            )}
-
-            {paymentMethod === 'netbanking' && (
-              <div className="form-group">
-                <label>Select Bank</label>
-                <select required className="bank-select">
-                  <option value="">Choose your bank</option>
-                  <option value="sbi">State Bank of India</option>
-                  <option value="hdfc">HDFC Bank</option>
-                  <option value="icici">ICICI Bank</option>
-                  <option value="axis">Axis Bank</option>
-                </select>
-              </div>
-            )}
-
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="btn-primary pay-btn"
               disabled={isProcessing}
             >
-              {isProcessing ? 'Processing...' : 'Confirm Payment'}
+              {isProcessing ? 'Opening Payment...' : `Pay ₹${finalAmount}`}
             </button>
           </form>
         </div>

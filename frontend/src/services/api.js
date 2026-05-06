@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://cinephelia-backend.onrender.com';
+export const API_URL = 'https://cinephelia-backend.onrender.com';
 
 axios.defaults.baseURL = API_URL;
 axios.defaults.withCredentials = true;
