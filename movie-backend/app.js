@@ -35,18 +35,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ── Session ───────────────────────────────────────────────────────────────────
+app.set('trust proxy', 1);
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev_secret',
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
-    ttl: 24 * 60 * 60, // 1 day
+    ttl: 24 * 60 * 60,
   }),
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 1 day
+    sameSite: 'none',
+    maxAge: 24 * 60 * 60 * 1000,
   },
 }));
 
