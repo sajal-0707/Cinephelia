@@ -10,6 +10,7 @@ const authRoutes    = require('./routes/auth.routes');
 const userRoutes    = require('./routes/user.routes');
 const movieRoutes   = require('./routes/movie.routes');
 const bookingRoutes = require('./routes/booking.routes');
+const paymentRoutes = require('./routes/payment.routes');
 
 const app = express();
 
@@ -62,6 +63,7 @@ app.use('/api/auth',     authRoutes);
 app.use('/api/users',    userRoutes);
 app.use('/api/movies',   movieRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
